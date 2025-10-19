@@ -6,38 +6,22 @@
 int FPS = 60;
 int winWidth = 800;
 int winHeight = 800;
-int numLayers = 21;
-int currentLayer = 0;
-int dropLayerItem = 0;
 int sequenceLen = 5;
-int showStartInterface = 1;
-int showWelcomeInterface = 1;
-int PAUSE = 20000;
+int PAUSE = 10000;
 
 float tileWidth = 100.0;
 float tileHeight = 10.0f;
 float tileRotation = 0;
 float tileOffsetY = 20;
+int maxTileSize = 45;
 Color tileColor = YELLOW;
 
 const char *title = "Double Down";
 
-typedef struct Layer {
+typedef struct Tile {
   Rectangle rect;
   Color color;
-} Layer;
-
-typedef struct Destroyer {
-  int x;
-  int y;
-  int radius;
-  Color color;
-} Destroyer;
-
-void popLayer(Layer *layers, int layerIndex) {
-  layers[layerIndex].rect.x = 10.0f;
-  layers[layerIndex].color = RED;
-}
+} Tile;
 
 int randInt() {
   float num = (float)rand() / RAND_MAX;
@@ -70,43 +54,85 @@ void pause(int delay) {
 }
 
 void welcomeInterface() {
-  BeginDrawing();
-  ClearBackground(BLACK);
-  customDrawText("Double Down", 270, 50, 40);
-  customDrawText(
-      "You have 3 seconds to memorize five random numbers when the game", 100,
-      200, 18);
-  customDrawText(
-      "loads. For each number press the 'SPACE' key that number of times to",
-      100, 250, 18);
-  customDrawText(
-      "load tiles matching that number. When done with a number, press the",
-      100, 300, 18);
-  customDrawText(
-      "'ENTER' key to signal completion and move on to the next. All the best",
-      100, 350, 18);
-  EndDrawing();
+  while (!WindowShouldClose()) {
+    BeginDrawing();
+    ClearBackground(BLACK);
+    customDrawText("Double Down", 270, 50, 40);
+    customDrawText(
+        "You have 3 seconds to memorize five random numbers when the game", 100,
+        200, 18);
+    customDrawText(
+        "loads. For each number press the 'SPACE' key that number of times to",
+        100, 250, 18);
+    customDrawText(
+        "load tiles matching that number. When done with a number, press the",
+        100, 300, 18);
+    customDrawText("'ENTER' key to signal completion and move on to the next. "
+                   "All the best",
+                   100, 350, 18);
+    customDrawText("Press C to continue", 300, 700, 18);
+
+    EndDrawing();
+    if (IsKeyPressed(KEY_C))
+      break;
+  }
 }
 
 void startInterface(int *seq) {
-  BeginDrawing();
-  ClearBackground(BLACK);
-  showSequence(seq);
-  EndDrawing();
+  while (!WindowShouldClose()) {
+    BeginDrawing();
+    ClearBackground(BLACK);
+    showSequence(seq);
+    EndDrawing();
+    pause(10000);
+    break;
+  }
 }
 
-void gameInterface(Layer *layerMem, Destroyer *destroyer, int *seq) {
-  BeginDrawing();
-  ClearBackground(BLACK);
+void gameInterface() {
+  while (!WindowShouldClose()) {
 
-  DrawCircle(destroyer->x, destroyer->y, destroyer->radius, destroyer->color);
+    Tile *tiles = malloc(sizeof(Tile) * maxTileSize);
+    if (tiles == NULL)
+      printf("Memory allocation failed for tiles");
 
-  for (int i = 0; i < numLayers; i++) {
-    DrawRectanglePro(layerMem[i].rect, (Vector2){0.0, 0.0}, tileRotation,
-                     layerMem[i].color);
+    BeginDrawing();
+    ClearBackground(BLACK);
+
+    // used
+    int tileIndex = 0;
+    int stackIndex = 0;
+    int stacks[] = {100, 200, 300, 400, 500};
+    int currentStack = stacks[stackIndex];
+    int currentTilePosY = 700;
+
+    if (IsKeyPressed(KEY_ENTER)) {
+      stackIndex += 1;
+      currentStack = stacks[stackIndex];
+    }
+
+    if (IsKeyPressed(KEY_SPACE)) {
+      tileIndex += 1;
+      currentTilePosY = currentTilePosY - tileOffsetY;
+      tiles[tileIndex] = (Tile){.rect =
+                                    (Rectangle){
+                                        .x = currentStack,
+                                        .y = currentTilePosY,
+                                        .width = tileWidth,
+                                        .height = tileHeight,
+                                    },
+                                .color = tileColor};
+      printf("stack => %d \n", currentStack);
+      printf("stack index => %d \n", stackIndex);
+      printf("tile index => %d \n", tileIndex);
+    }
+
+    for (int i = 0; i < tileIndex; i++) {
+      DrawRectanglePro(tiles[i].rect, (Vector2){0.0, 0.0}, tileRotation,
+                       tiles[i].color);
+    }
+    EndDrawing();
   }
-
-  EndDrawing();
 }
 
 int main() {
@@ -117,60 +143,11 @@ int main() {
 
   int *seq = generateSequence();
 
-  Layer *layerMem = malloc(sizeof(Layer) * numLayers);
-  if (layerMem == NULL) {
-    printf("Failed to allocate memory");
-  }
+  welcomeInterface();
+  startInterface(seq);
+  gameInterface();
 
-  Destroyer destroyer = (Destroyer){
-      .x = 400,
-      .y = 200,
-      .radius = 20,
-      .color = BLUE,
-  };
-
-  for (int i = 1; i < numLayers; i++) {
-    layerMem[i] = (Layer){.rect = (Rectangle){.x = 350.0,
-                                              .y = 200.0 + (i * tileOffsetY),
-                                              .width = tileWidth,
-                                              .height = tileHeight},
-                          .color = tileColor};
-  }
-
-  while (!WindowShouldClose()) {
-
-    if (IsKeyPressed(KEY_SPACE)) {
-      dropLayerItem = 1;
-    }
-
-    if (dropLayerItem) {
-      currentLayer += 1;
-      popLayer(layerMem, currentLayer);
-      destroyer.y += tileOffsetY;
-      dropLayerItem = 0;
-    }
-
-    BeginDrawing();
-    ClearBackground(BLACK);
-
-    if (showWelcomeInterface) {
-      welcomeInterface();
-      pause(PAUSE);
-    }
-    showWelcomeInterface = 0;
-
-    if (showStartInterface) {
-      startInterface(seq);
-      pause(PAUSE);
-    }
-    showStartInterface = 0;
-
-    gameInterface(layerMem, &destroyer, seq);
-
-    EndDrawing();
-  }
-
-  free(layerMem);
+  // free(layerMem);
 
   CloseWindow();
 }
