@@ -9,12 +9,19 @@ int winHeight = 800;
 int sequenceLen = 5;
 int PAUSE = 10000;
 
-float tileWidth = 100.0;
-float tileHeight = 10.0f;
-float tileRotation = 0;
-float tileOffsetY = 20;
+int tileWidth = 100;
+int tileHeight = 10;
+int tileOffsetY = 20;
+int tileOffsetX = 50;
 int maxTileSize = 45;
+float tileRotation = 0;
 Color tileColor = YELLOW;
+
+int stackIndex = 0;
+int tileCounter = 0;
+
+int currentStackHeight = 700;
+int stacks[] = {120, 240, 360, 480, 600};
 
 const char *title = "Double Down";
 
@@ -22,6 +29,12 @@ typedef struct Tile {
   Rectangle rect;
   Color color;
 } Tile;
+
+typedef struct Renderer {
+  int stackIndex;
+  int tileCount;
+  Rectangle rect[45];
+} Renderer;
 
 int randInt() {
   float num = (float)rand() / RAND_MAX;
@@ -31,7 +44,9 @@ int randInt() {
 int *generateSequence() {
   int *sequence = malloc(sizeof(sequenceLen) * sequenceLen);
   for (int i = 0; i < sequenceLen; i++) {
-    sequence[i] = randInt();
+    int num = randInt();
+    if (num != 0)
+      sequence[i] = num;
   }
   return sequence;
 }
@@ -61,9 +76,9 @@ void welcomeInterface() {
     customDrawText(
         "You have 3 seconds to memorize five random numbers when the game", 100,
         200, 18);
-    customDrawText(
-        "loads. For each number press the 'SPACE' key that number of times to",
-        100, 250, 18);
+    customDrawText("loads. For each number press the 'SPACE' key that number "
+                   "of times to",
+                   100, 250, 18);
     customDrawText(
         "load tiles matching that number. When done with a number, press the",
         100, 300, 18);
@@ -89,48 +104,68 @@ void startInterface(int *seq) {
   }
 }
 
-void gameInterface() {
-  while (!WindowShouldClose()) {
+void gameInterface(Renderer *renderer) {
 
-    Tile *tiles = malloc(sizeof(Tile) * maxTileSize);
-    if (tiles == NULL)
-      printf("Memory allocation failed for tiles");
+  for (int i = 0; i < sequenceLen; i++) {
+    renderer[i].tileCount = 0;
+  }
+
+  while (!WindowShouldClose()) {
 
     BeginDrawing();
     ClearBackground(BLACK);
 
-    // used
-    int tileIndex = 0;
-    int stackIndex = 0;
-    int stacks[] = {100, 200, 300, 400, 500};
-    int currentStack = stacks[stackIndex];
-    int currentTilePosY = 700;
-
+    customDrawText("Press the Space key to start.", 100, 750, 20);
     if (IsKeyPressed(KEY_ENTER)) {
-      stackIndex += 1;
-      currentStack = stacks[stackIndex];
+
+      stackIndex++;
+      tileCounter = 0;
+      currentStackHeight = 700;
     }
 
     if (IsKeyPressed(KEY_SPACE)) {
-      tileIndex += 1;
-      currentTilePosY = currentTilePosY - tileOffsetY;
-      tiles[tileIndex] = (Tile){.rect =
-                                    (Rectangle){
-                                        .x = currentStack,
-                                        .y = currentTilePosY,
-                                        .width = tileWidth,
-                                        .height = tileHeight,
-                                    },
-                                .color = tileColor};
-      printf("stack => %d \n", currentStack);
-      printf("stack index => %d \n", stackIndex);
-      printf("tile index => %d \n", tileIndex);
+      tileCounter++;
+      currentStackHeight = currentStackHeight - tileOffsetY;
+      renderer[stackIndex].stackIndex = stackIndex;
+      renderer[stackIndex].tileCount = tileCounter + 1;
+      renderer[stackIndex].rect[tileCounter] = (Rectangle){
+          stacks[stackIndex], currentStackHeight, tileWidth, tileHeight};
+
+      // for (int i = 0; i < sequenceLen; i++) {
+      //   printf("%d \t", renderer[i].tileCount);
+      // }
+      // printf("\n");
     }
 
-    for (int i = 0; i < tileIndex; i++) {
-      DrawRectanglePro(tiles[i].rect, (Vector2){0.0, 0.0}, tileRotation,
-                       tiles[i].color);
+    for (int x = 0; x < sequenceLen; x++) {
+      int tileCount = renderer[x].tileCount;
+      for (int y = 0; y < tileCount; y++) {
+        DrawRectanglePro(renderer[x].rect[y], (Vector2){0.0, 0.0}, tileRotation,
+                         tileColor);
+      }
     }
+    EndDrawing();
+    if (stackIndex == 5)
+      break;
+  }
+}
+
+void scoreInterface(int *seq, Renderer *renderer) {
+
+  char scores[5] = {};
+
+  while (!WindowShouldClose()) {
+    BeginDrawing();
+    ClearBackground(BLACK);
+
+    customDrawText("Done. Your Score", 270, 50, 40);
+    for (int i = 0; i < sequenceLen; i++) {
+      if (seq[i] == renderer[i].tileCount)
+        scores[i] = 'w';
+      else
+        scores[i] = 'x';
+    }
+    customDrawText(scores, 270, 100, 40);
     EndDrawing();
   }
 }
@@ -142,12 +177,22 @@ int main() {
   SetTargetFPS(FPS);
 
   int *seq = generateSequence();
+  Renderer *renderer = malloc(sizeof(Renderer) * sequenceLen);
+  if (renderer == NULL)
+    printf("Failed to allocate memory to rendere\n");
 
   welcomeInterface();
   startInterface(seq);
-  gameInterface();
+  gameInterface(renderer);
+  scoreInterface(seq, renderer);
+
+  for (int i = 0; i < sequenceLen; i++) {
+    printf("seq[i]: %d, renderer[i].tileCount: %d \n", seq[i],
+           renderer[i].tileCount);
+  }
 
   // free(layerMem);
 
+  free(renderer);
   CloseWindow();
 }
