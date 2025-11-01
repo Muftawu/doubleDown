@@ -1,6 +1,8 @@
 #include "raylib.h"
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 int FPS = 60;
@@ -130,11 +132,6 @@ void gameInterface(Renderer *renderer) {
       renderer[stackIndex].tileCount = tileCounter + 1;
       renderer[stackIndex].rect[tileCounter] = (Rectangle){
           stacks[stackIndex], currentStackHeight, tileWidth, tileHeight};
-
-      // for (int i = 0; i < sequenceLen; i++) {
-      //   printf("%d \t", renderer[i].tileCount);
-      // }
-      // printf("\n");
     }
 
     for (int x = 0; x < sequenceLen; x++) {
@@ -142,12 +139,26 @@ void gameInterface(Renderer *renderer) {
       for (int y = 0; y < tileCount; y++) {
         DrawRectanglePro(renderer[x].rect[y], (Vector2){0.0, 0.0}, tileRotation,
                          tileColor);
+
+        char scoreBuffer[16];
+        sprintf(scoreBuffer, "%d", tileCounter);
+        customDrawText(scoreBuffer, stackIndex + tileOffsetX, 200, 50);
       }
     }
     EndDrawing();
     if (stackIndex == 5)
       break;
   }
+}
+
+void resetGame(Renderer *renderer) {
+  int *seq = generateSequence();
+  tileCounter = 0;
+  currentStackHeight = 700;
+  memset(&renderer[stackIndex], 0, sizeof(Renderer));
+  welcomeInterface();
+  startInterface(seq);
+  gameInterface(renderer);
 }
 
 void scoreInterface(int *seq, Renderer *renderer) {
@@ -158,7 +169,10 @@ void scoreInterface(int *seq, Renderer *renderer) {
     BeginDrawing();
     ClearBackground(BLACK);
 
-    customDrawText("Done. Your Score", 270, 50, 40);
+    customDrawText("Game complete. Your Score", 100, 50, 35);
+    customDrawText("Press 'A' to play again", 150, 0.45 * GetScreenHeight(),
+                   30);
+    ;
     for (int i = 0; i < sequenceLen; i++) {
       if (seq[i] == renderer[i].tileCount)
         scores[i] = 'w';
@@ -167,6 +181,11 @@ void scoreInterface(int *seq, Renderer *renderer) {
     }
     customDrawText(scores, 270, 100, 40);
     EndDrawing();
+    if (IsKeyPressed(KEY_A)) {
+      stackIndex = 0;
+      resetGame(renderer);
+      scoreInterface(seq, renderer);
+    }
   }
 }
 
@@ -190,8 +209,6 @@ int main() {
     printf("seq[i]: %d, renderer[i].tileCount: %d \n", seq[i],
            renderer[i].tileCount);
   }
-
-  // free(layerMem);
 
   free(renderer);
   CloseWindow();
