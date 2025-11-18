@@ -26,6 +26,8 @@ int currentStackHeight = 700;
 int stacks[] = {120, 240, 360, 480, 600};
 
 const char *title = "Double Down";
+int reset = 0;
+int scoreCount = 0;
 
 typedef struct Tile {
   Rectangle rect;
@@ -117,16 +119,21 @@ void gameInterface(Renderer *renderer) {
     BeginDrawing();
     ClearBackground(BLACK);
 
-    customDrawText("Press the Space key to start.", 100, 750, 20);
-    if (IsKeyPressed(KEY_ENTER)) {
+    if (IsKeyPressed(KEY_R)) {
+      reset = 1;
+      break;
+    }
 
+    customDrawText("Hit the space key to start stacking", 100, 700, 20);
+    customDrawText("To restart the game, hit 'R", 100, 750, 20);
+    if (IsKeyPressed(KEY_ENTER)) {
       stackIndex++;
       tileCounter = 0;
       currentStackHeight = 700;
     }
 
     if (IsKeyPressed(KEY_SPACE)) {
-      tileCounter++;
+      tileCounter = tileCounter + 1;
       currentStackHeight = currentStackHeight - tileOffsetY;
       renderer[stackIndex].stackIndex = stackIndex;
       renderer[stackIndex].tileCount = tileCounter + 1;
@@ -140,9 +147,12 @@ void gameInterface(Renderer *renderer) {
         DrawRectanglePro(renderer[x].rect[y], (Vector2){0.0, 0.0}, tileRotation,
                          tileColor);
 
-        char scoreBuffer[16];
-        sprintf(scoreBuffer, "%d", tileCounter);
-        customDrawText(scoreBuffer, stackIndex + tileOffsetX, 200, 50);
+        char scoreBuffer[15];
+        char currentStackIndex[25];
+        sprintf(scoreBuffer, "Tile count: %d", tileCounter);
+        sprintf(currentStackIndex, "Current Stack Index: %d", stackIndex + 1);
+        customDrawText(currentStackIndex, 100, 50, 25);
+        customDrawText(scoreBuffer, 100, 100, 25);
       }
     }
     EndDrawing();
@@ -163,29 +173,32 @@ void resetGame(Renderer *renderer) {
 
 void scoreInterface(int *seq, Renderer *renderer) {
 
-  char scores[5] = {};
+  for (int i = 0; i < sequenceLen; i++) {
+    if (seq[i] == renderer[i].tileCount) {
+      printf("seq[i]: %d \n", seq[i]);
+      printf("renderer[i].tileCount: %d \n", renderer[i].tileCount - 1);
+      scoreCount++;
+    }
+  }
+  printf("score count %d\n", scoreCount);
 
   while (!WindowShouldClose()) {
     BeginDrawing();
     ClearBackground(BLACK);
 
-    customDrawText("Game complete. Your Score", 100, 50, 35);
-    customDrawText("Press 'A' to play again", 150, 0.45 * GetScreenHeight(),
-                   30);
-    ;
-    for (int i = 0; i < sequenceLen; i++) {
-      if (seq[i] == renderer[i].tileCount)
-        scores[i] = 'w';
-      else
-        scores[i] = 'x';
-    }
-    customDrawText(scores, 270, 100, 40);
+    char scoreBuffer[10];
+    sprintf(scoreBuffer, "Score: %d", scoreCount);
+    customDrawText(scoreBuffer, 270, 0.4 * GetScreenHeight(), 40);
+    customDrawText("Press 'A' to play again.", 170, 0.9 * GetScreenHeight(),
+                   28);
+
     EndDrawing();
     if (IsKeyPressed(KEY_A)) {
       stackIndex = 0;
       resetGame(renderer);
-      scoreInterface(seq, renderer);
     }
+    if (reset)
+      resetGame(renderer);
   }
 }
 
@@ -200,10 +213,14 @@ int main() {
   if (renderer == NULL)
     printf("Failed to allocate memory to rendere\n");
 
-  welcomeInterface();
-  startInterface(seq);
-  gameInterface(renderer);
-  scoreInterface(seq, renderer);
+  if (reset) {
+    startInterface(seq);
+  } else {
+    welcomeInterface();
+    startInterface(seq);
+    gameInterface(renderer);
+    scoreInterface(seq, renderer);
+  }
 
   for (int i = 0; i < sequenceLen; i++) {
     printf("seq[i]: %d, renderer[i].tileCount: %d \n", seq[i],
