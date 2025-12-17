@@ -5,10 +5,10 @@
 #include <string.h>
 #include <time.h>
 
-int FPS = 60;
 int winWidth = 800;
 int winHeight = 800;
 int sequenceLen = 5;
+int FPS = 60;
 int PAUSE = 10000;
 
 int tileWidth = 100;
@@ -40,17 +40,16 @@ typedef struct Renderer {
   Rectangle rect[45];
 } Renderer;
 
-int randInt() {
-  float num = (float)rand() / RAND_MAX;
-  return (int)(num * 10);
+float randInt() {
+  float num = (float)rand() / (float)RAND_MAX;
+  return (num * 10) - 1;
 }
 
 int *generateSequence() {
   int *sequence = malloc(sizeof(sequenceLen) * sequenceLen);
   for (int i = 0; i < sequenceLen; i++) {
     int num = randInt();
-    if (num != 0)
-      sequence[i] = num;
+    sequence[i] = num + 1;
   }
   return sequence;
 }
@@ -173,22 +172,27 @@ void resetGame(Renderer *renderer) {
 
 void scoreInterface(int *seq, Renderer *renderer) {
 
+  char scoreBuffer[10];
+  char correctSequenceBuffer[40];
+
   for (int i = 0; i < sequenceLen; i++) {
-    if (seq[i] == renderer[i].tileCount) {
-      printf("seq[i]: %d \n", seq[i]);
-      printf("renderer[i].tileCount: %d \n", renderer[i].tileCount - 1);
+    printf("seq[i] : renderer[i].tileCount: %d : %d \n", seq[i],
+           renderer[i].tileCount - 1);
+    if (seq[i] == renderer[i].tileCount - 1) {
       scoreCount++;
     }
   }
-  printf("score count %d\n", scoreCount);
 
   while (!WindowShouldClose()) {
     BeginDrawing();
     ClearBackground(BLACK);
 
-    char scoreBuffer[10];
     sprintf(scoreBuffer, "Score: %d", scoreCount);
-    customDrawText(scoreBuffer, 270, 0.4 * GetScreenHeight(), 40);
+    sprintf(correctSequenceBuffer, "Correct Sequence: %d %d %d %d %d", seq[0],
+            seq[1], seq[2], seq[3], seq[4]);
+
+    customDrawText(scoreBuffer, 270, 0.4 * GetScreenHeight(), 30);
+    customDrawText(correctSequenceBuffer, 100, 0.5 * GetScreenHeight(), 30);
     customDrawText("Press 'A' to play again.", 170, 0.9 * GetScreenHeight(),
                    28);
 
@@ -220,13 +224,15 @@ int main() {
     startInterface(seq);
     gameInterface(renderer);
     scoreInterface(seq, renderer);
+    // welcomeInterface();
   }
 
-  for (int i = 0; i < sequenceLen; i++) {
-    printf("seq[i]: %d, renderer[i].tileCount: %d \n", seq[i],
-           renderer[i].tileCount);
-  }
+  // for (int i = 0; i < sequenceLen; i++) {
+  //   printf("seq[i]: %d, renderer[i].tileCount: %d \n", seq[i],
+  //          renderer[i].tileCount);
+  // }
 
   free(renderer);
+  free(seq);
   CloseWindow();
 }
